@@ -11,13 +11,14 @@
         #authScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f1015; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .auth-card { background: #1a1c23; padding: 30px; border-radius: 12px; border: 1px solid #333; width: 100%; max-width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .auth-card h3 { margin-top: 0; color: #aa55ff; }
-        .auth-card p { font-size: 13px; color: #888; }
+        .auth-card p { font-size: 13px; color: #888; margin-bottom: 20px; }
+        .auth-input { width: 100%; padding: 10px; margin-bottom: 12px; background: #111; border: 1px solid #333; color: #fff; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
         
-        /* Main Dashboard (Hidden until paired) */
+        /* Main Dashboard (Hidden until authenticated) */
         #mainApp { display: none; }
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 15px; }
         h2 { margin: 0; color: #aa55ff; font-size: 20px; }
-        .status-badge { font-size: 12px; background: #1a1c23; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; color: #03DAC6; }
+        .status-badge { font-size: 12px; background: #1a1c23; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; color: #03DAC6; cursor: pointer; }
 
         /* Media Grid */
         .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
@@ -37,11 +38,15 @@
 </head>
 <body>
 
-    <!-- Security Pairing / Waiting Screen -->
+    <!-- Security Authentication Screen -->
     <div id="authScreen">
         <div class="auth-card">
-            <h3>Unpaired Device</h3>
-            <p id="statusText">Scan the QR code displayed on your Android TV to establish a secure Tailscale session.</p>
+            <h3>TV Authentication</h3>
+            <p>Enter your TV's Tailscale IP or hostname and the temporary password shown on your Android TV.</p>
+            <input type="text" id="tvIpInput" class="auth-input" placeholder="100.x.x.x or hostname">
+            <input type="password" id="tvPassInput" class="auth-input" placeholder="Temporary Password">
+            <button onclick="authenticateTV()" style="background: #aa55ff; margin-top: 5px;">Connect</button>
+            <p id="statusText" style="font-size: 11px; color: #ff5555; margin-top: 12px; min-height: 15px;"></p>
         </div>
     </div>
 
@@ -49,7 +54,7 @@
     <div id="mainApp">
         <header>
             <h2>Media Catalog</h2>
-            <div id="connectionStatus" class="status-badge">Connected via Tailscale</div>
+            <div id="connectionStatus" class="status-badge" onclick="logout()" title="Tap to disconnect">Connected (Logout)</div>
         </header>
 
         <div id="mediaGrid" class="grid">
@@ -74,57 +79,70 @@
         let currentStreamUrl = "";
         let currentTitle = "";
 
-        // Handle cryptographic pairing handshake and persistent session loading
-        window.addEventListener('DOMContentLoaded', async () => {
-            const hash = window.location.hash.substring(1);
-            const params = new URLSearchParams(hash);
-            const ip = params.get('ip');
-            const challenge = params.get('challenge');
-
+        // Check for existing session token on load
+        window.addEventListener('DOMContentLoaded', () => {
             const savedToken = localStorage.getItem('deviceToken');
             const savedIp = localStorage.getItem('tvIp');
 
-            // 1. Fresh scan from TV QR code
-            if (ip && challenge) {
-                document.getElementById('statusText').innerText = "Establishing secure handshake with TV...";
-                
-                try {
-                    const response = await fetch(`http://${ip}:9090/jsonrpc`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            jsonrpc: "2.0",
-                            method: "System.VerifyPairing",
-                            params: { challenge: challenge },
-                            id: 1
-                        })
-                    });
-
-                    const data = await response.json();
-                    if (data.result && data.result.device_token) {
-                        localStorage.setItem('deviceToken', data.result.device_token);
-                        localStorage.setItem('tvIp', ip);
-                        
-                        // Clean URL hash parameters for security
-                        history.replaceState(null, null, window.location.pathname);
-                        
-                        initDashboard(ip, data.result.device_token);
-                    } else {
-                        throw new Error("Invalid challenge response");
-                    }
-                } catch (e) {
-                    document.getElementById('statusText').innerText = "Pairing failed. Make sure you are on Tailscale and your TV app is active.";
-                }
-            } 
-            // 2. Auto-login using saved persistent token
-            else if (savedToken && savedIp) {
+            if (savedToken && savedIp) {
                 initDashboard(savedIp, savedToken);
-            } 
-            // 3. Unauthenticated state
-            else {
+            } else {
                 document.getElementById('authScreen').style.display = 'flex';
             }
         });
+
+        // Hash password client-side using Web Crypto API and authenticate
+        async function authenticateTV() {
+            const ip = document.getElementById('tvIpInput').value.trim();
+            const rawPass = document.getElementById('tvPassInput').value.trim();
+            const statusText = document.getElementById('statusText');
+
+            if (!ip || !rawPass) {
+                statusText.innerText = "Please fill in both fields.";
+                return;
+            }
+
+            statusText.innerText = "Encrypting & connecting...";
+
+            try {
+                // 1. Secure client-side SHA-256 hashing
+                const encoder = new TextEncoder();
+                const data = encoder.encode(rawPass);
+                const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+                const passwordHash = Array.from(new Uint8Array(hashBuffer))
+                    .map(b => b.toString(16).padStart(2, '0'))
+                    .join('');
+
+                // 2. Send hashed credentials to Python RPC server
+                const response = await fetch(`http://${ip}:9090/jsonrpc`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0",
+                        method: "System.VerifyPassword",
+                        params: { password_hash: passwordHash },
+                        id: 1
+                    })
+                });
+
+                const resData = await response.json();
+                if (resData.result && resData.result.device_token) {
+                    localStorage.setItem('deviceToken', resData.result.device_token);
+                    localStorage.setItem('tvIp', ip);
+                    initDashboard(ip, resData.result.device_token);
+                } else {
+                    throw new Error(resData.error ? resData.error.message : "Invalid password");
+                }
+            } catch (e) {
+                statusText.innerText = `Auth failed: ${e.message}. Check IP/password.`;
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('deviceToken');
+            localStorage.removeItem('tvIp');
+            location.reload();
+        }
 
         function initDashboard(ip, token) {
             document.getElementById('authScreen').style.display = 'none';
@@ -209,7 +227,6 @@
 
         function openIniPhoneChrome() {
             if (!currentStreamUrl) return;
-            // Convert to iOS Chrome deep-link scheme
             const cleanUrl = currentStreamUrl.replace(/^https?:\/\//, '');
             window.location.href = `googlechromes://${cleanUrl}`;
         }
