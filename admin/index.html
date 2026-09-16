@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Media Center</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f1015; color: #fff; margin: 0; padding: 20px; }
+        
+        /* Security Auth Screen */
+        #authScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #0f1015; z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .auth-card { background: #1a1c23; padding: 30px; border-radius: 12px; border: 1px solid #333; width: 100%; max-width: 320px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .auth-card h3 { margin-top: 0; color: #aa55ff; }
+        .auth-card p { font-size: 13px; color: #888; }
+        
+        /* Main Dashboard (Hidden until paired) */
+        #mainApp { display: none; }
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid #222; padding-bottom: 15px; }
+        h2 { margin: 0; color: #aa55ff; font-size: 20px; }
+        .status-badge { font-size: 12px; background: #1a1c23; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; color: #03DAC6; }
+
+        /* Media Grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 16px; }
+        .card { background: #1a1c23; border-radius: 8px; overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; border: 1px solid #222; }
+        .card:hover { transform: scale(1.03); box-shadow: 0 8px 20px rgba(170,85,255,0.2); }
+        .card img { width: 100%; height: 200px; object-fit: cover; }
+        .card-title { font-size: 13px; padding: 10px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Player Action Modal */
+        #playerModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 100; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .modal-card { background: #1a1c23; padding: 25px; border-radius: 12px; border: 1px solid #333; text-align: center; max-width: 400px; width: 100%; }
+        .modal-card h3 { color: #aa55ff; margin-top: 0; }
+        .modal-buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 20px; }
+        button { width: 100%; padding: 12px; border: none; font-weight: bold; border-radius: 6px; cursor: pointer; font-size: 14px; color: #fff; }
+        button:active { opacity: 0.8; }
+    </style>
+</head>
+<body>
+
+    <!-- Security Pairing / Waiting Screen -->
+    <div id="authScreen">
+        <div class="auth-card">
+            <h3>Unpaired Device</h3>
+            <p id="statusText">Scan the QR code displayed on your Android TV to establish a secure Tailscale session.</p>
+        </div>
+    </div>
+
+    <!-- Protected Media Dashboard -->
+    <div id="mainApp">
+        <header>
+            <h2>Media Catalog</h2>
+            <div id="connectionStatus" class="status-badge">Connected via Tailscale</div>
+        </header>
+
+        <div id="mediaGrid" class="grid">
+            <p style="color: #666;">Loading media library...</p>
+        </div>
+
+        <!-- Action Modal for Selected Item -->
+        <div id="playerModal">
+            <div class="modal-card">
+                <h3 id="modalTitle">Media Title</h3>
+                <p style="font-size: 12px; color: #888;">Choose playback action</p>
+                <div class="modal-buttons">
+                    <button onclick="castToTV()" style="background: #00a4dc;">Cast to Android TV (Tailscale)</button>
+                    <button onclick="openIniPhoneChrome()" style="background: #4285F4;">Open in iPhone Chrome</button>
+                    <button onclick="closeModal()" style="background: #2a2a2a; color: #aaa;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStreamUrl = "";
+        let currentTitle = "";
+
+        // Handle cryptographic pairing handshake and persistent session loading
+        window.addEventListener('DOMContentLoaded', async () => {
+            const hash = window.location.hash.substring(1);
+            const params = new URLSearchParams(hash);
+            const ip = params.get('ip');
+            const challenge = params.get('challenge');
+
+            const savedToken = localStorage.getItem('deviceToken');
+            const savedIp = localStorage.getItem('tvIp');
+
+            // 1. Fresh scan from TV QR code
+            if (ip && challenge) {
+                document.getElementById('statusText').innerText = "Establishing secure handshake with TV...";
+                
+                try {
+                    const response = await fetch(`http://${ip}:9090/jsonrpc`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            jsonrpc: "2.0",
+                            method: "System.VerifyPairing",
+                            params: { challenge: challenge },
+                            id: 1
+                        })
+                    });
+
+                    const data = await response.json();
+                    if (data.result && data.result.device_token) {
+                        localStorage.setItem('deviceToken', data.result.device_token);
+                        localStorage.setItem('tvIp', ip);
+                        
+                        // Clean URL hash parameters for security
+                        history.replaceState(null, null, window.location.pathname);
+                        
+                        initDashboard(ip, data.result.device_token);
+                    } else {
+                        throw new Error("Invalid challenge response");
+                    }
+                } catch (e) {
+                    document.getElementById('statusText').innerText = "Pairing failed. Make sure you are on Tailscale and your TV app is active.";
+                }
+            } 
+            // 2. Auto-login using saved persistent token
+            else if (savedToken && savedIp) {
+                initDashboard(savedIp, savedToken);
+            } 
+            // 3. Unauthenticated state
+            else {
+                document.getElementById('authScreen').style.display = 'flex';
+            }
+        });
+
+        function initDashboard(ip, token) {
+            document.getElementById('authScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            fetchLibrary(ip, token);
+        }
+
+        async function fetchLibrary(ip, token) {
+            const grid = document.getElementById('mediaGrid');
+            try {
+                const res = await fetch(`http://${ip}:9090/jsonrpc`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Device-Token': token
+                    },
+                    body: JSON.stringify({ jsonrpc: "2.0", method: "VideoLibrary.GetMovies", id: 1 })
+                });
+                
+                const data = await res.json();
+                if (data.error) throw new Error(data.error.message);
+                
+                const movies = data.result.movies;
+                grid.innerHTML = "";
+                
+                movies.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'card';
+                    card.innerHTML = `
+                        <img src="${item.art}" alt="${item.title}">
+                        <div class="card-title">${item.title}</div>
+                    `;
+                    card.onclick = () => openActionModal(item.stream_url, item.title);
+                    grid.appendChild(card);
+                });
+            } catch (e) {
+                grid.innerHTML = `<p style="color:#ff5555;">Failed to load library: ${e.message}</p>`;
+            }
+        }
+
+        function openActionModal(url, title) {
+            currentStreamUrl = url;
+            currentTitle = title;
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('playerModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('playerModal').style.display = 'none';
+        }
+
+        async function castToTV() {
+            const ip = localStorage.getItem('tvIp');
+            const token = localStorage.getItem('deviceToken');
+            
+            try {
+                const res = await fetch(`http://${ip}:9090/jsonrpc`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'X-Device-Token': token
+                    },
+                    body: JSON.stringify({
+                        jsonrpc: "2.0",
+                        method: "Player.Open",
+                        params: { 
+                            item: { file: currentStreamUrl }, 
+                            options: { title: currentTitle } 
+                        },
+                        id: 1
+                    })
+                });
+                
+                if (res.ok) {
+                    alert(`Beamed "${currentTitle}" to Android TV!`);
+                    closeModal();
+                }
+            } catch (e) {
+                alert(`Casting failed: ${e.message}`);
+            }
+        }
+
+        function openIniPhoneChrome() {
+            if (!currentStreamUrl) return;
+            // Convert to iOS Chrome deep-link scheme
+            const cleanUrl = currentStreamUrl.replace(/^https?:\/\//, '');
+            window.location.href = `googlechromes://${cleanUrl}`;
+        }
+    </script>
+</body>
+</html>
