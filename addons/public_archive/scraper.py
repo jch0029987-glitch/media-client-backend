@@ -2,7 +2,6 @@ import json
 import os
 
 def generate_catalog():
-    # Neutral catalog schema supporting both direct streams and metadata/hashes
     catalog = {
         "provider": "Public Domain & Open Source Archive",
         "items": [
@@ -10,7 +9,7 @@ def generate_catalog():
                 "id": "item-01",
                 "title": "Big Buck Bunny (Direct Stream)",
                 "type": "http_stream",
-                "stream_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                "stream_url": "https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_720p_h264.mov",
                 "art": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg"
             },
             {
@@ -24,7 +23,6 @@ def generate_catalog():
         ]
     }
 
-    # Ensure target directory exists and write out the catalog
     output_dir = "addons/public_archive"
     os.makedirs(output_dir, exist_ok=True)
     
