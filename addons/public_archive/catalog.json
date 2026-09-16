@@ -5,7 +5,7 @@
       "id": "item-01",
       "title": "Big Buck Bunny (Direct Stream)",
       "type": "http_stream",
-      "stream_url": "https://download.blender.org/peach/bigbuckbunny_movies/big_buck_bunny_720p_h264.mov",
+      "stream_url": "https://archive.org/download/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
       "art": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg"
     },
     {
