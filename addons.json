@@ -1,0 +1,13 @@
+{
+  "repository": "Media Client TV Core Registry",
+  "version": 1,
+  "addons": [
+    {
+      "id": "plugin.video.public_archive",
+      "name": "Public Domain & Open Source",
+      "version": "1.0.0",
+      "type": "video_source",
+      "catalog_url": "https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/media-client-backend/main/addons/public_archive/catalog.json"
+    }
+  ]
+}
