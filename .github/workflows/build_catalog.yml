@@ -1,4 +1,4 @@
-Name: Build and Deploy Catalog
+name: Build and Deploy Catalog
 
 on:
   push:
