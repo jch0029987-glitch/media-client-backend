@@ -3,8 +3,14 @@ import os
 import subprocess
 
 def get_youtube_stream_url(video_url):
-    # Uses yt-dlp to extract a direct, playable MP4 stream link from YouTube
-    cmd = ["yt-dlp", "-g", "-f", "best[ext=mp4]/best", video_url]
+    # Spoof an Android client request to bypass GitHub Actions datacenter bot blocks
+    cmd = [
+        "yt-dlp", 
+        "--extractor-args", "youtube:player_client=android", 
+        "-g", 
+        "-f", "best[ext=mp4]/best", 
+        video_url
+    ]
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     return result.stdout.strip().splitlines()[0]
 
