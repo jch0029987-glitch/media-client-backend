@@ -3,22 +3,34 @@ import os
 import subprocess
 
 def get_youtube_stream_url(video_url):
-    # Spoof an Android client request to bypass GitHub Actions datacenter bot blocks
-    cmd = [
-        "yt-dlp", 
-        "--extractor-args", "youtube:player_client=android", 
-        "-g", 
-        "-f", "best[ext=mp4]/best", 
-        video_url
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-    return result.stdout.strip().splitlines()[0]
+    # Try multiple YouTube player clients to bypass restrictions seamlessly
+    clients = ["android", "web_embedded", "web"]
+    
+    for client in clients:
+        print(f"Attempting extraction using client: {client}")
+        cmd = [
+            "yt-dlp", 
+            "--extractor-args", f"youtube:player_client={client}", 
+            "-g", 
+            "-f", "best[ext=mp4]/best", 
+            video_url
+        ]
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
+            lines = result.stdout.strip().splitlines()
+            if lines:
+                print(f"Successfully extracted stream using {client}")
+                return lines[0]
+        except Exception as e:
+            print(f"Client {client} failed: {e}")
+            
+    raise RuntimeError("All yt-dlp fallback clients failed to extract a stream URL.")
 
 def generate_catalog():
-    # Rickroll YouTube URL
     rickroll_url = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     print("Extracting fresh YouTube stream link via yt-dlp...")
     direct_stream = get_youtube_stream_url(rickroll_url)
+    print(f"Resolved Stream URL: {direct_stream[:60]}...")
 
     catalog = {
         "provider": "YouTube Test Feed",
