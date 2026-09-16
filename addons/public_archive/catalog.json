@@ -1,12 +1,12 @@
 {
-  "provider": "Public Domain & Open Source Archive",
+  "provider": "YouTube Test Feed",
   "items": [
     {
-      "id": "item-01",
-      "title": "Big Buck Bunny (Archive.org Stream)",
+      "id": "yt-rickroll",
+      "title": "Never Gonna Give You Up (YouTube Live Extract)",
       "type": "http_stream",
-      "stream_url": "https://archive.org/download/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
-      "art": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg"
+      "stream_url": "https://rr3---sn-5hnednls.googlevideo.com/videoplayback?expire=1726...", 
+      "art": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
     },
     {
       "id": "item-02",
