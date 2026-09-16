@@ -1,12 +1,12 @@
 {
-  "provider": "Public Domain & Open Source Archive",
+  "provider": "YouTube Test Feed",
   "items": [
     {
-      "id": "item-01",
-      "title": "Big Buck Bunny (Direct Stream)",
+      "id": "yt-rickroll",
+      "title": "Never Gonna Give You Up (YouTube Live Extract)",
       "type": "http_stream",
-      "stream_url": "https://archive.org/download/BigBuckBunny_328/BigBuckBunny_512kb.mp4",
-      "art": "https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg"
+      "stream_url": "https://rr3---sn-vgqskns7.googlevideo.com/videoplayback?expire=1789555009&ei=4Ryqapm_BdS1lu8P_MiJmAw&ip=52.154.21.50&id=o-AE4HLalf0mkJSeJD-5tTyXpXvhPOSos4tQmc1865vUtW&itag=18&source=youtube&requiressl=yes&xpc=EgVo2aDSNQ%3D%3D&cps=1245&met=1789533409%2C&mh=7c&mm=18%2C29&mn=sn-vgqskns7%2Csn-vgqsrnlk&ms=aub%2Crdu&mv=m&mvi=3&pl=16&rms=aub%2Caub&initcwndbps=5225875&bui=AR3QkAkNChd8Fh1H5tvJCBT5xqzooRHljzgPvBUz3fIf7u5zJRUq_7PRaAR0IBkhlqX-P7CtHtbVFIpU&spc=I-rgIdpdKLQ4xJFifcy-oTgvd6zwn6tsMHMpxa0--cN-Dt1L3QFIfaA49SfStcOdMJZgPhHN&vprv=1&svpuc=1&mime=video%2Fmp4&rqh=1&cnr=14&ratebypass=yes&dur=213.089&lmt=1766960953317159&mt=1789532974&fvip=1&fexp=51565115&c=ANDROID&txp=5538534&sparams=expire%2Cei%2Cip%2Cid%2Citag%2Csource%2Crequiressl%2Cxpc%2Cbui%2Cspc%2Cvprv%2Csvpuc%2Cmime%2Crqh%2Ccnr%2Cratebypass%2Cdur%2Clmt&sig=AE0s2JYwRgIhAOehUne_aUk84idHBSio28kczwAfsl5XoV725yAQocBAAiEA1ibduC9Z6MtopQCtfqagOvhCxkFWfjQNga6KuQPdMBE%3D&lsparams=cps%2Cmet%2Cmh%2Cmm%2Cmn%2Cms%2Cmv%2Cmvi%2Cpl%2Crms%2Cinitcwndbps&lsig=APaTxxMwRQIgfWpHaVFC2fEil8LTMZ8thugKOo4ENPscWvvVJQp28R8CIQDo9H2_WbAOrSyrY79Z9FCX1oZN6m3f5sAA2jbudK1J9w%3D%3D",
+      "art": "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
     },
     {
       "id": "item-02",
